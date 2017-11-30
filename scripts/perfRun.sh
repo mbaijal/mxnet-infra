@@ -1,12 +1,44 @@
 #!/usr/bin/env bash
 
-export RESULT_FILE="Result-"$(date +%F-%H-%M-%S)".log"
-exec &>> $RESULT_FILE
+print_help() {
+	echo "The performance test runs train_imagenet script with following default values."
+	echo "FLOATTYPE = float16"
+	echo "BATCH_SIZE = 128"
+	echo "STORE = nccl"
+	echo "EPOCHS = 1"
+	echo "LAYERS = 50"
+	echo "NETWORK=resnet-v1"
+	echo "By default, the script will run the train_imagenet script for incremental batch sizes and gpus."
+	echo "For example, 128 batch size for 1 GPU, 256 for 2 GPUS, etc"
+	echo 
+	echo "Following tunnable environment variables are supported"
+	echo "MXNET_HOME: Path to mxnet source is mandatory."
+	echo "LAYERS : Number of layers"
+	echo "NETWORK : Network to be used."
+	echo "STORE: kv-store parameter"
+	echo "FIXED_GPUS: Run the test only for given number of gpus"
+	echo "BATCH_SIZE_FIXED: Keep the batch size fixed."
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -h | --help )
+		print_help
+		shift
+        exit
+        ;;
+    esac
+done
 
 if [ -z ${MXNET_HOME+x} ] ; then
     echo "MXNET_HOME is unset. Can not proceed without finding mxnet source"
+    print_help
     exit
 fi
+
+export RESULT_FILE="Result-"$(date +%F-%H-%M-%S)".log"
+exec &>> $RESULT_FILE
+
 
 if [ -z ${TEST_FILE+x} ] ; then
     echo "TEST_FILE is unset. Using TEST_FILE = $MXNET_HOME/example/image-classification/train_imagenet.py"
@@ -19,7 +51,7 @@ if [ -z ${FLOATTYPE+x} ] ; then
 fi
 
 if [ -z ${EPOCHS+x} ] ; then
-    echo "EPOCHS is unset. Using EPOCHS=5"
+    echo "EPOCHS is unset. Using EPOCHS=1"
     export EPOCHS=5
 fi
 
@@ -34,7 +66,7 @@ if [ -z ${BATCH_SIZE+x} ] ; then
 fi
 
 if [ -z ${BATCH_SIZE_FIXED+x} ]; then
-    echo "BATCH_SIZE_FIZED is unset, BATCH_SIZE will increment by 2 with the number of GPUS"
+    echo "BATCH_SIZE_FIXED is unset, BATCH_SIZE will increment by 2 with the number of GPUS"
     export BATCH_SIZE_FIXED=0
 fi
 
@@ -76,7 +108,7 @@ echo
 echo
 echo
 
-echo "Environment variables to be used....."
+echo "Test parameters used....."
 echo "MXNET_HOME=$MXNET_HOME"
 echo "TEST_FILE=$TEST_FILE"
 echo "FLOATTYPE=$FLOATTYPE"
